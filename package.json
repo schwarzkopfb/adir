@@ -1,0 +1,28 @@
+{
+  "name": "adir",
+  "version": "0.0.1",
+  "description": "Utility for recursive aggregation of directory trees",
+  "main": "index.js",
+  "scripts": {
+    "test": "tap test/*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schwarzkopfb/adir.git"
+  },
+  "keywords": [
+    "aggregation",
+    "aggregate",
+    "dirrectory",
+    "folder",
+    "tree",
+    "iterate",
+    "walk"
+  ],
+  "author": "Schwarzkopf Balazs <schwarzkopfb@icloud.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/schwarzkopfb/adir/issues"
+  },
+  "homepage": "https://github.com/schwarzkopfb/adir#readme"
+}
