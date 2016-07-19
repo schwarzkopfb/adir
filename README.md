@@ -16,22 +16,23 @@ Utility for recursive aggregation of directory trees
 const aggregate = require('adir'),
       tree      = {}
 
-function onDirectory(stat, subtree) {
-    return subtree[ stat.base ] = {}
+function onEntry(stats, subtree) {
+    var name = stats.basename
+
+    if (stats.isDirectory())
+        return subtree[ name ] = {}
+    else
+        subtree[ name ] = stats.size
 }
 
-function onFile(stat, subtree) {
-    subtree[ stat.base ] = stat.size
-}
-
-function callback(err) {
+function done(err) {
     if (err)
         console.error(err.stack)
     else
         console.log(tree)
 }
 
-aggregate('./', onDirectory, onFile, tree, callback)
+aggregate('./', onEntry, tree, done)
 
 ```
 
