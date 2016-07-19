@@ -3,8 +3,10 @@
   "version": "0.0.1",
   "description": "Utility for recursive aggregation of directory trees",
   "main": "index.js",
+  "files": [ "index.js" ],
   "scripts": {
-    "test": "tap test/*"
+    "test": "tap test/*.js",
+    "coverage": "npm test -- --cov --coverage-report=lcov"
   },
   "repository": {
     "type": "git",
@@ -24,5 +26,11 @@
   "bugs": {
     "url": "https://github.com/schwarzkopfb/adir/issues"
   },
-  "homepage": "https://github.com/schwarzkopfb/adir#readme"
+  "homepage": "https://github.com/schwarzkopfb/adir#readme",
+  "devDependencies": {
+    "bluebird": "^3.4.1",
+    "mkdirp": "^0.5.1",
+    "rimraf": "^2.5.3",
+    "tap": "^6.2.0"
+  }
 }
