@@ -1,87 +1,97 @@
 /**
  * @module adir
+ * @exports startDirectoryAggregation
  */
 
 'use strict'
 
-module.exports = aggregateDirectory
+exports = module.exports = startDirectoryAggregation
 
 var fs     = require('fs'),
     join   = require('path').join,
     assert = require('assert'),
-    equal  = assert.equal
+    equal  = assert.equal,
+    stop   = {}
+
+/**
+ * @param {string} path - Root directory to start iterating on.
+ * @param {function(fs.Stats,*)} onEntry - Called each time when a directory or file is reached in the tree.
+ * @param {*} value - Initial value of aggregation.
+ * @returns {Promise}
+ */
+function aggregateDirectory(path, onEntry, value) {
+    return new Promise(function (done, error) {
+        fs.readdir(path, function (err, list) {
+            if (err)
+                return error(err)
+
+            var tasks   = [],
+                pending = list.length
+
+            if (!pending)
+                return done()
+
+            list.forEach(function (basename) {
+                var subpath = join(path, basename)
+
+                function next(value) {
+                    if (value !== stop)
+                        return aggregateDirectory(subpath, onEntry, value).catch(error)
+                }
+
+                fs.lstat(subpath, function (err, stats) {
+                    if (err)
+                        return error(err)
+
+                    stats.path     = subpath
+                    stats.basename = basename
+
+                    var result = onEntry(stats, value),
+                        isTask = result instanceof Promise
+
+                    if (stats.isDirectory()) {
+                        if (isTask)
+                            tasks.push(result.then(next, error))
+                        else if (result !== stop)
+                            tasks.push(next(result))
+                    }
+                    else if (isTask)
+                        tasks.push(result)
+
+                    if (!--pending)
+                        Promise.all(tasks)
+                               // result is the task array,
+                               // which is irrelevant to the user
+                               .then(function () {
+                                   done(null)
+                               }, error)
+                })
+            })
+        })
+    })
+}
 
 /**
  * Aggregate a directory tree recursively.
  *
  * @param {string} path - Root directory to start iterating on.
- * @param {*} value - Initial value of aggregation.
- * @param {function} onDirectory - Called each time when iteration reaches a directory in tree.
- * @param {function} onFile - Called each time when iteration reaches a file in tree.
- * @param {function(Error|null)} [callback] - Called when the iteration ends.
+ * @param {function(fs.Stats,*)} onEntry - Called each time when a directory or file is reached in the tree.
+ * @param {*} [value] - Initial value of aggregation.
+ * @param {function(Error|null)} [callback] - Called when the aggregation ends.
  * @returns {Promise}
  */
-function aggregateDirectory(path, value, onDirectory, onFile, callback) {
+function startDirectoryAggregation(path, onEntry, value, callback) {
     equal(typeof path, 'string', 'directory path must be a string')
-    equal(typeof onFile, 'function', 'onFile must be a function')
-    equal(typeof onDirectory, 'function', 'onDirectory must be a function')
+    equal(typeof onEntry, 'function', 'onFile must be a function')
 
     if (callback !== undefined)
         equal(typeof callback, 'function', 'callback must be a function')
+    else if (typeof value === 'function') {
+        callback = value
+        value    = undefined
+    }
 
-    var res = new Promise(function (done, error) {
-        fs.readdir(path, function (err, list) {
-            if (err)
-                error(err)
-            else {
-                var tasks   = [],
-                    pending = list.length
-
-                if (!pending)
-                    return done()
-
-                list.forEach(function (item) {
-                    var subpath = join(path, item)
-
-                    fs.lstat(subpath, function (err, stat) {
-                        if (err)
-                            return error(err)
-
-                        if (stat.isDirectory()) {
-                            var next = function (value) {
-                                return aggregateDirectory(subpath, value, onDirectory, onFile)
-                            }
-
-                            var transform = onDirectory(subpath, item, value)
-
-                            if (transform instanceof Promise)
-                                tasks.push(transform.then(next))
-                            else {
-                                var val = transform === undefined
-                                    ? value
-                                    : transform
-
-                                tasks.push(next(val))
-                            }
-                        }
-                        else {
-                            var task = onFile(subpath, item, value)
-
-                            if (task instanceof Promise)
-                                tasks.push(task)
-                        }
-
-                        --pending || Promise.all(tasks)
-                                            // result is the task array,
-                                            // which is irrelevant to the user
-                                            .then(function () {
-                                                done(null)
-                                            }, error)
-                    })
-                })
-            }
-        })
-    })
+    var res = aggregateDirectory(path, onEntry, value)
 
     if (callback)
         res.then(callback, callback)
@@ -89,7 +99,10 @@ function aggregateDirectory(path, value, onDirectory, onFile, callback) {
     return res
 }
 
-Object.defineProperties(aggregateDirectory, {
+Object.defineProperties(exports, {
+    // exclude inherited properties if any
+    __proto__: null,
+
     /**
      * @prop {string} version - The version string from package manifest.
      */
@@ -117,5 +130,13 @@ Object.defineProperties(aggregateDirectory, {
 
             fs = value
         }
+    },
+
+    /**
+     * @prop {object} break - Reference used to signal the end of an aggregation branch.
+     */
+    break: {
+        enumerable: true,
+        value:      stop
     }
 })

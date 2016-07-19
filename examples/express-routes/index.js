@@ -7,24 +7,24 @@
 if (typeof Promise === 'undefined')
     global.Promise = require('bluebird')
 
-var path = require('path'),
-    expr = require('express'),
-    adir = require('../..'),
-    dir  = path.resolve(__dirname, 'routes'),
-    app  = expr()
+var resolve = require('path').resolve,
+    express = require('express'),
+    adir    = require('../..'),
+    dir     = resolve(__dirname, 'routes'),
+    app     = express()
 
-function onDir(path, base, router) {
-    var subRouter = new expr.Router
-    router.use('/' + base, subRouter)
-    return subRouter
-}
-
-function onFile(path, base, router) {
-    require(path).call(router)
+function onEntry(stats, router) {
+    if (stats.isDirectory()) {
+        var subrouter = new express.Router
+        router.use('/' + stats.basename, subrouter)
+        return subrouter
+    }
+    else
+        require(stats.path).call(router)
 }
 
 function onError(err) {
-    console.error('cannot build the routing stack :(')
+    console.error('cannot build the routing table :(')
     console.error(err.stack)
 }
 
@@ -39,6 +39,15 @@ function onEnd() {
     })
 }
 
-adir(dir, app, onDir, onFile)
-    .catch(onError)
-    .then(onEnd)
+function done(err) {
+    if (err)
+        onError(err)
+    else
+        onEnd()
+}
+
+// note:
+// `app` is a function, so we have to pass `done` here,
+// otherwise `app` itself would be treated as the aggregation callback.
+// (Because aggregation initial value is optional.)
+adir(dir, onEntry, app, done)

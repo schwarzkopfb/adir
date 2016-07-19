@@ -1,5 +1,5 @@
 /**
- * This example shows how to create an object representing a directory tree.
+ * This example shows how to create an object representing a directory tree with basic ignore file support.
  */
 
 'use strict'
@@ -7,26 +7,39 @@
 if (typeof Promise === 'undefined')
     global.Promise = require('bluebird')
 
-var path  = require('path'),
-    adir  = require('../'),
-    dir   = path.resolve(__dirname, '../'),
-    index = {}
+var fs      = require('fs'),
+    resolve = require('path').resolve,
+    adir    = require('../'),
+    dir     = resolve(__dirname, '../'),
+    gignore = [
+        '.DS_Store',
+        '.git',
+        '.idea'
+    ],
+    ignore  = fs.readFileSync(resolve(dir, '.gitignore'), 'utf8')
+                .split(/\n+|\r+/g)
+                .filter(Boolean)
+                .concat(gignore),
+    tree    = {}
 
-function onDirectory(path, base, index) {
-    var node      = {}
-    index[ base ] = node
-    return node
-}
+function onEntry(stats, subtree) {
+    var name = stats.basename
 
-function onFile(path, base, index) {
-    index[ base ] = true
+    if (~ignore.indexOf(name))
+        // stop aggregation under the excluded folder
+        return adir.break
+
+    if (stats.isDirectory())
+        return subtree[ name ] = {}
+    else
+        subtree[ name ] = stats.size
 }
 
 function done(err) {
     if (err)
         console.error(err.stack)
     else
-        console.log(index)
+        console.log(tree)
 }
 
-adir(dir, index, onDirectory, onFile, done)
+adir(dir, onEntry, tree, done)

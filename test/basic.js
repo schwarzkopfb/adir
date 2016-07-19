@@ -5,18 +5,46 @@ require('./init')
 if (typeof Promise === 'undefined')
     global.Promise = require('bluebird')
 
-var resolve = require('path').resolve,
+var fs      = require('fs'),
+    resolve = require('path').resolve,
     assert  = require('assert'),
     test    = require('tap'),
     adir    = require('../'),
     home    = resolve(__dirname, 'tmp')
 
+// see only debug output
+switch (process.argv[ 2 ]) {
+    case '-d':
+    case '--debug':
+        test.unpipe(process.stdout)
+            .pipe(fs.createWriteStream('/dev/null'))
+}
+
 function noop() {
 }
+
+process.on('unhandledRejection', function () {
+    test.fail('all the rejections should be handled')
+})
 
 // Validate the exposed API.
 test.test('api', function (test) {
     test.type(adir, 'function', 'main export should be a function')
+    test.type(adir(home, noop), Promise, 'adir() should return a Promise')
+
+    test.test('callback signatures', function (test) {
+        var ival = {}
+
+        return adir(home, function (stats, val) {
+            test.type(stats, fs.Stats, 'first argument for `onEntry` should be an `fs.Stats` instance')
+            test.type(stats.path, 'string', '`fs.Stats` instance should be extended with `path`')
+            test.type(stats.basename, 'string', '`fs.Stats` instance should be extended with `basename`')
+            test.strictEqual(val, ival, '`initialValue` should be passed to `onEntry` when first called')
+
+            return val
+        }, ival)
+    })
+
     test.type(adir.version, 'string', 'adir.version should be a string')
     test.equal(
         adir.version,
@@ -31,9 +59,16 @@ test.test('api', function (test) {
         'adir.version should be read-only'
     )
 
-    test.test('fs interface', function (test) {
-        var fs = require('fs')
+    test.type(adir.break, 'object', 'adir.break should be an object')
+    test.throws(
+        function () {
+            adir.break = true
+        },
+        TypeError,
+        'adir.break should be read-only'
+    )
 
+    test.test('fs interface', function (test) {
         test.strictEqual(adir.fs, fs, 'adir.fs should default to the native fs module')
 
         test.throws(
@@ -78,7 +113,7 @@ test.test('api', function (test) {
             'adir.fs should be accepted'
         )
 
-        adir.fs = require('fs') // reset to default for later tests
+        adir.fs = fs // reset to default for later tests
         test.end()
     })
 
@@ -97,51 +132,74 @@ test.test('api', function (test) {
         )
         test.throws(
             function () {
-                adir(adir, null, noop)
+                adir('path')
             },
             assert.AssertionError,
             'adir() arguments should be asserted'
         )
         test.throws(
             function () {
-                adir({}, null, noop, noop)
+                adir(adir, noop)
             },
             assert.AssertionError,
             'adir() arguments should be asserted'
         )
         test.throws(
             function () {
-                adir('path', null, noop, noop, true)
+                adir({}, noop, noop)
+            },
+            assert.AssertionError,
+            'adir() arguments should be asserted'
+        )
+        test.throws(
+            function () {
+                adir('path', noop, null, true)
+            },
+            assert.AssertionError,
+            'adir() arguments should be asserted'
+        )
+        test.throws(
+            function () {
+                adir('path', true, null, noop)
             },
             assert.AssertionError,
             'adir() arguments should be asserted'
         )
 
-        test.end()
+        // valid signatures
+        var tasks = [
+            adir(home, noop),
+            adir(home, noop, noop),
+            adir(home, noop, true, noop),
+        ]
+        Promise.all(tasks)
+               .then(test.end, test.threw)
     })
 
     test.end()
 })
 
 // This test ensures that all the expected entries are iterated
-// even if there is no aggregated value returned by `onDirectory`.
+// even if there is no aggregated value returned by `onEntry`.
 test.test('simple iteration', function (test) {
-    var counter = 0
+    var expected = [
+            'a', 'b', 'c', 'd', 'e',
+            'test', 'test',
+            'test.txt', 'test.txt', 'test.txt',
+            'test.txt', 'test.txt'
+        ],
+        actual   = []
 
-    function onDir() {
-        counter++
-    }
-
-    function onFile() {
-        counter++
+    function onEntry(stats) {
+        actual.push(stats.basename)
     }
 
     function onEnd() {
-        test.equal(counter, 12, 'all the entries should be iterated')
+        test.same(actual.sort(), expected, 'all the expected entries should be iterated')
         test.end()
     }
 
-    adir(home, 0, onDir, onFile, onEnd).catch(test.threw)
+    adir(home, onEntry).then(onEnd, test.threw)
 })
 
 // Test aggregation with a primitive initial value.
@@ -149,12 +207,11 @@ test.test('parent count', function (test) {
     var actual   = [],
         expected = [ 0, 1, 2, 3, 5 ]
 
-    function onDir(path, base, count) {
-        return count + 1
-    }
-
-    function onFile(path, base, count) {
-        actual.push(count)
+    function onEntry(stats, count) {
+        if (stats.isDirectory())
+            return count + 1
+        else
+            actual.push(count)
     }
 
     function onEnd() {
@@ -162,7 +219,7 @@ test.test('parent count', function (test) {
         test.end()
     }
 
-    adir(home, 0, onDir, onFile, onEnd).catch(test.threw)
+    adir(home, onEntry, 0).then(onEnd, test.threw)
 })
 
 // Test aggregation with a reference initial value type.
@@ -192,12 +249,13 @@ test.test('directory tree', function (test) {
             }
         }
 
-    function onDir(path, base, tree) {
-        return tree[ base ] = {}
-    }
+    function onEntry(stats, tree) {
+        var name = stats.basename
 
-    function onFile(path, base, tree) {
-        tree[ base ] = true
+        if (stats.isDirectory())
+            return tree[ name ] = {}
+        else
+            tree[ name ] = true
     }
 
     function onEnd() {
@@ -205,50 +263,47 @@ test.test('directory tree', function (test) {
         test.end()
     }
 
-    adir(home, actual, onDir, onFile)
-        .then(onEnd) // test this signature
+    adir(home, onEntry, actual)
+        .then(onEnd)
         .catch(test.threw)
 })
 
 // This test ensures that
-// 1) the provided `onDirectory` and `onFile` handlers are called respectively and
-// 2) the returned promises from `onDirectory` and `onFile` handlers are awaited as expected.
+// 1) the expected `fs.Stats` instances are provided to `onEntry` and
+// 2) the returned promises from `onEntry` calls are awaited.
 test.test('stats', function (test) {
-    var lstat = require('fs').lstat,
+    var lstat = fs.lstat,
         dirs  = 0
 
-    function onDir(path) {
+    function onEntry(stats) {
+        var path  = stats.path,
+            isDir = stats.isDirectory()
+
         return new Promise(function (ok, error) {
-            lstat(path, function (err, stat) {
+            lstat(path, function (err, stats) {
                 if (err)
                     error(err)
                 else {
-                    dirs++
+                    var res
 
-                    test.ok(stat.isDirectory())
+                    if (isDir) {
+                        dirs++
+                        res = stats.isDirectory()
+                    }
+                    else
+                        res = stats.isFile() || stats.isSymbolicLink()
+
+                    test.ok(res)
                     ok()
                 }
             })
         })
     }
 
-    function onFile(path) {
-        return new Promise(function (ok, error) {
-            lstat(path, function (err, stat) {
-                if (err)
-                    error(err)
-                else {
-                    test.ok(
-                        stat.isFile() ||
-                        stat.isSymbolicLink()
-                    )
-                    ok()
-                }
-            })
-        })
-    }
+    function done(err) {
+        if (err)
+            return test.threw(err)
 
-    function onEnd() {
         /*
          * ./tmp/a
          * ./tmp/a/test
@@ -262,23 +317,68 @@ test.test('stats', function (test) {
         test.end()
     }
 
-    adir(home, null, onDir, onFile, onEnd).catch(test.threw)
+    adir(home, onEntry, done)
+})
+
+// This test ensures that the user can stop an aggregation branch if returns `adir.break` from an `onEntry` handler.
+test.test('stop aggregation', function (test) {
+    test.plan(2)
+
+    test.test('sync', function (test) {
+        var counter = 0
+
+        function onEntry(stats) {
+            counter++
+
+            if (stats.basename === 'b')
+                return adir.break
+        }
+
+        function onEnd() {
+            test.equal(counter, 5, 'aggregation should be stopped')
+            test.end()
+        }
+
+        adir(home, onEntry).then(onEnd, test.threw)
+    })
+
+    test.test('async', function (test) {
+        var counter = 0
+
+        function onEntry(stats) {
+            counter++
+
+            if (stats.basename === 'b')
+                return new Promise(function (done) {
+                    process.nextTick(function () {
+                        done(adir.break)
+                    })
+                })
+        }
+
+        function onEnd() {
+            test.equal(counter, 5, 'aggregation should be stopped')
+            test.end()
+        }
+
+        adir(home, onEntry).then(onEnd, test.threw)
+    })
 })
 
 test.test('errors', function (test) {
     var path    = resolve(home, 'non-existing-path'),
         pending = 2
 
-    function done(err) {
+    function onError(err) {
         test.type(err, Error)
         --pending || test.end()
     }
 
     // test error of the readdir call
-    adir(path, null, noop, noop).catch(done)
-    // this will cause an `ELOOP` because of the symlink loop
+    adir(path, noop).catch(onError)
+    // this will cause an `ELOOP` because of the symlink loop in the test tree
     // (unless lstat, stat follows symlinks)
-    adir.fs.lstat = require('fs').stat
+    adir.fs.lstat = fs.stat
     // test error of the stat call
-    adir(home, null, noop, noop).catch(done)
+    adir(home, noop).catch(onError)
 })

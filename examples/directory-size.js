@@ -13,29 +13,18 @@ var fs   = require('fs'),
     dir  = path.resolve(__dirname, '../'),
     sum  = 0
 
-function onDirectory() {
-    // only count the size of files
+function onEntry(stats) {
+    // only count the size of files (including symlinks)
+    if (!stats.isDirectory())
+        sum += stats.size
 }
 
-function onFile(path) {
-    return new Promise(function (done, error) {
-        fs.lstat(path, function (err, stat) {
-            if (err)
-                error(err)
-            else {
-                sum += stat.size
-                done()
-            }
-        })
-    })
+function onError(err) {
+    console.error(err.stack)
 }
 
 function onEnd() {
     console.log('size of the project directory is', sum, 'bytes')
 }
 
-adir(dir, null, onDirectory, onFile)
-    .then(onEnd)
-    .catch(function (err) {
-        console.error(err.stack)
-    })
+adir(dir, onEntry).then(onEnd, onError)
