@@ -8,10 +8,10 @@
 # adir
 
 Utility for recursive aggregation of directory trees.
-Useful for creating directory [indices](/examples/tree.js),
-[searching](/examples/search.js) by file attributes,
-performing [calculations](/examples/directory-size.js) on a directory tree,
-building dynamic [routing tables](/examples/express-routes.js), etc.
+Useful for creating directory [indices](./examples/tree.js),
+[searching](./examples/search.js) by file attributes,
+performing [calculations](./examples/directory-size.js) on a directory tree,
+building [routing tables](./examples/express-routes/index.js) dynamically, etc.
 
 ## Usage
 
@@ -44,9 +44,35 @@ aggregate('./', onEntry, tree, done)
 
 ## How It Works?
 
+`adir` iterates over subdirectories of a folder and calls the given `onEntry` handler each time when a directory or file is found.
+`onEntry` gets called with an extended `fs.Stats` instance and the result returned by the previous call.
+You can think of it like a kind of `Array.prototype.reduce()` except the reduction _forks_ into a new _branch_ when it meets a directory.
+
+```js
+
+const aggregate = require('adir')
+
+function onEntry(stats, count) {
+    if (stats.isDirectory())
+        return count + 1
+    else
+        console.log(stats.path, 'has', count, 'parent directories')
+}
+
+aggregate('./', onEntry, 0)
+
+```
+
+If `onEntry` returns a `Promise` then it'll be awaited before the aggregation of the corresponding branch continues. See [this](./examples/concat-contents.js) for a working example.
+
+### Cancellation
+
+The aggregation of a branch stops immediately if `onEntry` returns with `adir.break` (or the `Promise` returned by `onEntry` resolves with that value).
+[This](./examples/tree.js) example shows that in action.
+
 ## Compatibility
 
-`adir` is compatible with Node 0.8 and above but a `Promise` implementation is required even if you're only using the callback API.
+`adir` is compatible with Node 0.8 and above but a `Promise` implementation is required even if you're using the callback API only.
 Tested with [bluebird](https://www.npmjs.com/package/bluebird).
 
 ## Installation
