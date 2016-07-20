@@ -7,7 +7,11 @@
 
 # adir
 
-Utility for recursive aggregation of directory trees
+Utility for recursive aggregation of directory trees.
+Useful for creating directory [indices](/examples/tree.js),
+[searching](/examples/search.js) by file attributes,
+performing [calculations](/examples/directory-size.js) on a directory tree,
+building dynamic [routing tables](/examples/express-routes.js), etc.
 
 ## Usage
 
@@ -41,6 +45,9 @@ aggregate('./', onEntry, tree, done)
 ## How It Works?
 
 ## Compatibility
+
+`adir` is compatible with Node 0.8 and above but a `Promise` implementation is required even if you're only using the callback API.
+Tested with [bluebird](https://www.npmjs.com/package/bluebird).
 
 ## Installation
 
