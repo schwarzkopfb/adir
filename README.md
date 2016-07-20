@@ -76,9 +76,9 @@ adir('./', onEntry, 0, callback) instanceof Promise
 
 ## How It Works?
 
-`adir` iterates over subdirectories of a folder and calls the given `onEntry` handler each time when a directory or file is found.
-`onEntry` gets called with an extended `fs.Stats` instance and the result returned by the previous call.
-You can think of it like a kind of `Array.prototype.reduce()` except the reduction _forks_ into a new _branch_ when it meets a directory.
+`adir` iterates over subdirectories of a folder and calls the given `onEntry` handler on each directory or file,
+taking an extended `fs.Stats` instance _and_ the value previously returned in the last invocation of `onEntry`, or `initialValue`, if supplied.
+You can think of it like a kind of `Array.prototype.reduce()` except the reduction _forks_ when it meets a directory.
 
 ```js
 

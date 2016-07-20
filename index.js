@@ -15,7 +15,7 @@ var fs     = require('fs'),
 
 /**
  * @param {string} path - Root directory to start iterating on.
- * @param {function(fs.Stats,*)} onEntry - Called each time when a directory or file is reached in the tree.
+ * @param {function(fs.Stats,*)} onEntry - Function to execute on each directory or file.
  * @param {*} value - Initial value of aggregation.
  * @returns {Promise}
  */
@@ -75,7 +75,7 @@ function aggregateDirectory(path, onEntry, value) {
  * Aggregate a directory tree recursively.
  *
  * @param {string} path - Root directory to start iterating on.
- * @param {function(fs.Stats,*)} onEntry - Called each time when a directory or file is reached in the tree.
+ * @param {function(fs.Stats,*)} onEntry - Function to execute on each directory or file.
  * @param {*} [value] - Initial value of aggregation.
  * @param {function(Error|null)} [callback] - Called when the aggregation ends.
  * @returns {Promise}

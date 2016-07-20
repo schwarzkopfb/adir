@@ -1,5 +1,5 @@
 /**
- * todo: describe it
+ * This example shows how to pause an aggregation branch if you do something asynchronous in `onEntry`.
  */
 
 'use strict'
@@ -14,7 +14,7 @@ var fs   = require('fs'),
 
 function onEntry(stats) {
     if (stats.isFile() && stats.basename !== '.DS_Store')
-        // if a promise is returned then that will be awaited
+    // if a promise is returned then that will be awaited
         return new Promise(function (done, error) {
             fs.readFile(stats.path, 'utf8', function (err, content) {
                 if (err)
@@ -31,8 +31,8 @@ function done(err) {
     if (err)
         console.error(err.stack)
     else
-        // it's guaranteed that all the io operations initiated by `onEntry`
-        // are finished, because of the returned promises
+    // it's guaranteed that all the io operations initiated by `onEntry`
+    // are finished, because of the returned promises
         file.close()
 }
 
