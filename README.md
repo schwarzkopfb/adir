@@ -43,8 +43,9 @@ aggregate('./', onEntry, tree, done)
 ## API
 
 `adir(path, onEntry, [initialValue], [callback])` ⇒ `Promise` <br/>
-`adir.break` <br/>
-`adir.version` <br/>
+`adir.fs`: The file system interface to use.<br/>
+`adir.break`: Reference used to signal the end of an aggregation branch.<br/>
+`adir.version`: The version string from package manifest.<br/>
 
 ```js
 
@@ -52,6 +53,7 @@ const fs   = require('fs'),
       adir = require('adir')
 
 typeof adir === 'function'
+adir.fs === fs
 typeof adir.break === 'object'
 typeof adir.version === 'string'
 
