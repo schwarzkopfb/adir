@@ -4,6 +4,9 @@
 
 'use strict'
 
+if (typeof Promise === 'undefined')
+    global.Promise = require('bluebird')
+
 var fs   = require('fs'),
     path = require('path'),
     adir = require('../'),

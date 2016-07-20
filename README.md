@@ -42,6 +42,38 @@ aggregate('./', onEntry, tree, done)
 
 ## API
 
+`adir(path, onEntry, [initialValue], [callback])` ⇒ `Promise` <br/>
+`adir.break` <br/>
+`adir.version` <br/>
+
+```js
+
+const fs   = require('fs'),
+      adir = require('adir')
+
+typeof adir === 'function'
+typeof adir.break === 'object'
+typeof adir.version === 'string'
+
+function onEntry(stats, value) {
+    stats instanceof fs.Stats
+    typeof stats.path === 'string'
+    typeof stats.basename === 'string'
+
+    value === 0
+
+    return value
+}
+
+function callback(err) {
+    err instanceof Error ||
+    err === null
+}
+
+adir('./', onEntry, 0, callback) instanceof Promise
+
+```
+
 ## How It Works?
 
 `adir` iterates over subdirectories of a folder and calls the given `onEntry` handler each time when a directory or file is found.
