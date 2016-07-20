@@ -1,5 +1,5 @@
 /**
- * This example shows how to build the router stack of an Express application dynamically.
+ * This example shows how to build the routing stack of an Express application dynamically.
  */
 
 'use strict'

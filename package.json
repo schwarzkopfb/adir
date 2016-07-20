@@ -1,6 +1,6 @@
 {
   "name": "adir",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Utility for recursive aggregation of directory trees",
   "main": "index.js",
   "files": [ "index.js" ],
@@ -15,11 +15,13 @@
   "keywords": [
     "aggregation",
     "aggregate",
-    "dirrectory",
+    "reduce",
+    "directory",
     "folder",
     "tree",
     "iterate",
-    "walk"
+    "walk",
+    "tree"
   ],
   "author": "Schwarzkopf Balazs <schwarzkopfb@icloud.com>",
   "license": "MIT",
