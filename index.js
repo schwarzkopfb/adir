@@ -7,11 +7,13 @@
 
 exports = module.exports = startDirectoryAggregation
 
-var fs     = require('fs'),
-    join   = require('path').join,
-    assert = require('assert'),
-    equal  = assert.equal,
-    stop   = {}
+var fs      = require('fs'),
+    path    = require('path'),
+    assert  = require('assert'),
+    join    = path.join,
+    resolve = path.resolve,
+    equal   = assert.equal,
+    stop    = {}
 
 /**
  * @param {string} path - Root directory to start iterating on.
@@ -91,7 +93,7 @@ function startDirectoryAggregation(path, onEntry, value, callback) {
         value    = undefined
     }
 
-    var res = aggregateDirectory(path, onEntry, value)
+    var res = aggregateDirectory(resolve(path), onEntry, value)
 
     if (callback)
         res.then(callback, callback)

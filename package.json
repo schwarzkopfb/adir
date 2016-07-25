@@ -1,6 +1,6 @@
 {
   "name": "adir",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Utility for recursive aggregation of directory trees",
   "main": "index.js",
   "files": [ "index.js" ],

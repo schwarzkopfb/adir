@@ -30,10 +30,13 @@ function onEntry(stats) {
 function done(err) {
     if (err)
         console.error(err.stack)
-    else
-    // it's guaranteed that all the io operations initiated by `onEntry`
-    // are finished, because of the returned promises
+    else {
+        // it's guaranteed that all the io operations initiated by `onEntry`
+        // are finished, because of the returned promises
         file.close()
+
+        console.log('see', path.resolve(__dirname, 'all_examples.js'))
+    }
 }
 
 adir(__dirname, onEntry, done)

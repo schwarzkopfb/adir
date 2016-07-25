@@ -1,12 +1,14 @@
 'use strict'
 
 require('./init')
+require('./isAbsolute')
 
 if (typeof Promise === 'undefined')
     global.Promise = require('bluebird')
 
 var fs      = require('fs'),
-    resolve = require('path').resolve,
+    path    = require('path'),
+    resolve = path.resolve,
     assert  = require('assert'),
     test    = require('tap'),
     adir    = require('../'),
@@ -38,7 +40,9 @@ test.test('api', function (test) {
         return adir(home, function (stats, val) {
             test.type(stats, fs.Stats, 'first argument for `onEntry` should be an `fs.Stats` instance')
             test.type(stats.path, 'string', '`fs.Stats` instance should be extended with `path`')
+            test.ok(path.isAbsolute(stats.path), '`path` must be absolute')
             test.type(stats.basename, 'string', '`fs.Stats` instance should be extended with `basename`')
+            test.notOk(path.isAbsolute(stats.basename), '`basename` must not be absolute')
             test.strictEqual(val, ival, '`initialValue` should be passed to `onEntry` when first called')
 
             return val
